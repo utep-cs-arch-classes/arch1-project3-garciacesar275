@@ -12,10 +12,9 @@
 
 #define GREEN_LED BIT6
 
-AbRect paddle1 = {abRectGetBounds, abRectCheck, {2, 10}};
-AbRect paddle2 = {abRectGetBounds, abRectCheck, {2, 10}};
-AbRect rect10 = {abRectGetBounds, abRectCheck, {10,10}}; /**< 10x10 rectangle */
-AbRArrow rightArrow = {abRArrowGetBounds, abRArrowCheck, 30};
+AbRect paddle1 = {abRectGetBounds, abRectCheck, {2, 10}}; /* 2x10 rectangle*/
+AbRect paddle2 = {abRectGetBounds, abRectCheck, {2, 10}}; /* 2x10 rectangle*/
+AbRect rect10 = {abRectGetBounds, abRectCheck, {10,10}}; /* 10x10 rectangle */
 
 AbRectOutline fieldOutline = {	/* playing field */
   abRectOutlineGetBounds, abRectOutlineCheck,   
@@ -112,7 +111,8 @@ movLayerDraw(MovLayer *movLayers, Layer *layers)
 //Region fence = {{10,30}, {SHORT_EDGE_PIXELS-10, LONG_EDGE_PIXELS-10}}; /**< Create a fence region */
 
 /** Advances a moving shape within a fence
- *  
+ *  Checks for collisions with a paddle and if so then bounce off
+ *
  *  \param ml The moving shape to be advanced
  *  \param fence The region which will serve as a boundary for ml
  */
@@ -148,6 +148,9 @@ void mlAdvance(MovLayer *ml, Region *fence)
 /* 
  * This was done with collaboration with Luis Cuellar. He helped me with
  * the logic of a shape colliding with another.
+ *
+ * Much of the logic was taken from mlAdvanced. Detect if a ball collided
+ * with a paddle layer and if so then return 1.
 */
 int isCollision(const MovLayer *ml, const MovLayer *paddle)
 {
@@ -169,12 +172,17 @@ int isCollision(const MovLayer *ml, const MovLayer *paddle)
   return 1;
 }
 
-void shapeIntersect(Region *rIntersect, const Region *r1, const Region *r2)
+/* Logic to detect intersections between the paddle and the ball. */
+void shapeIntersect(Region *sIntersect, const Region *r1, const Region *r2)
 {
-  vec2Max(&rIntersect->topLeft, &r1->topLeft, &r2->topLeft);
-  vec2Min(&rIntersect->botRight, &r1->botRight, &r2->botRight);
+  vec2Max(&sIntersect->topLeft, &r1->topLeft, &r2->topLeft);
+  vec2Min(&sIntersect->botRight, &r1->botRight, &r2->botRight);
 }
 
+/* Uses isCollision to detect when a ball hits a paddle and if it
+ * does then simply play a sound. Different paddles play different
+ * sound tone.
+ */
 void check_play_sound()
 {
   if(isCollision(&ml0, &ml1))
@@ -292,21 +300,26 @@ void wdt_c_handler()
 	//playerWin("Player 2");
       } 
     */
+    /* Logic for button press. */
+    //Make paddle1 go up
     if (!(p2sw_read() & BIT0))
       {
-	ml1.velocity.axes[1] = -3; 
+	ml1.velocity.axes[1] = -1; 
       }
+    //Make paddle1 go down
     if(!(p2sw_read() & BIT1))
       {
-	ml1.velocity.axes[1] = 3;
+	ml1.velocity.axes[1] = 1;
       }
+    //Make paddle2 go up
     if(!(p2sw_read() & BIT2))
       {
-	ml2.velocity.axes[1] = -3;
+	ml2.velocity.axes[1] = -1;
       }
+    //Make paddle2 go down
     if(!(p2sw_read() & BIT3))
       {
-	ml2.velocity.axes[1] = 3;
+	ml2.velocity.axes[1] = 1;
       }
     redrawScreen = 1;
     count = 0;
