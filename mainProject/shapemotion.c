@@ -166,7 +166,6 @@ int isCollision(const MovLayer *ml, const MovLayer *paddle)
 {
   Region ball, p, inter; //ball, paddle, shape intersect
 
-  buzzer_play();
   abShapeGetBounds(ml->layer->abShape, &(ml->layer->pos), &ball);
   abShapeGetBounds(paddle->layer->abShape, &(paddle->layer->pos), &p);
   shapeIntersect(&inter, &ball, &p);  
@@ -187,6 +186,18 @@ void shapeIntersect(Region *rIntersect, const Region *r1, const Region *r2)
 {
   vec2Max(&rIntersect->topLeft, &r1->topLeft, &r2->topLeft);
   vec2Min(&rIntersect->botRight, &r1->botRight, &r2->botRight);
+}
+
+void check_play_sound()
+{
+  if(isCollision(&ml0, &ml1))
+    {
+      buzzer_play(2000);
+    }
+  if(isCollision(&ml0, &ml2))
+    {
+      buzzer_play(2500);
+    }
 }
 
 
@@ -244,7 +255,8 @@ void wdt_c_handler()
     mlAdvance(&ml0, &fieldFence, &ml1);
     ml1.velocity.axes[1] = 0;
     ml2.velocity.axes[1] = 0;
-    buzzer_play_default();
+    buzzer_play(0);
+    check_play_sound();
     if (!(p2sw_read() & BIT0))
       {
 	ml1.velocity.axes[1] = -3; 
