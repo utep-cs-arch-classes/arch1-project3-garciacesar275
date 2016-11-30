@@ -150,7 +150,7 @@ void mlAdvance(MovLayer *ml, Region *fence, MovLayer *paddle1)
       	}
       if(isCollision(&ml0, &ml2))
 	{
-      	  int vel = ml->velocity.axes[axis] = -ml->velocity.axes[axis];
+	  int vel = ml->velocity.axes[axis] = -ml->velocity.axes[axis];
       	  newPos.axes[axis] += (2*vel);
       	}
     } /**< for axis */
@@ -166,10 +166,11 @@ int isCollision(const MovLayer *ml, const MovLayer *paddle)
 {
   Region ball, p, inter; //ball, paddle, shape intersect
 
+  buzzer_play();
   abShapeGetBounds(ml->layer->abShape, &(ml->layer->pos), &ball);
   abShapeGetBounds(paddle->layer->abShape, &(paddle->layer->pos), &p);
-  shapeIntersect(&inter, &ball, &p);
-
+  shapeIntersect(&inter, &ball, &p);  
+  
   int x1 = inter.topLeft.axes[0];
   int x2 = inter.botRight.axes[0];
   int y1 = inter.topLeft.axes[1];
@@ -206,7 +207,6 @@ void main()
   lcd_init();
   shapeInit();
   p2sw_init(15);
-  buzzer_init();
 
   shapeInit();
 
@@ -218,6 +218,7 @@ void main()
 
 
   enableWDTInterrupts();      /**< enable periodic interrupt */
+  buzzer_init();
   or_sr(0x8);	              /**< GIE (enable interrupts) */
 
   drawString5x7(0,0, "switches:", COLOR_GREEN, COLOR_BLUE);
@@ -243,6 +244,7 @@ void wdt_c_handler()
     mlAdvance(&ml0, &fieldFence, &ml1);
     ml1.velocity.axes[1] = 0;
     ml2.velocity.axes[1] = 0;
+    buzzer_play_default();
     if (!(p2sw_read() & BIT0))
       {
 	ml1.velocity.axes[1] = -3; 
