@@ -129,7 +129,7 @@ movLayerDraw(MovLayer *movLayers, Layer *layers)
  *  \param ml The moving shape to be advanced
  *  \param fence The region which will serve as a boundary for ml
  */
-void mlAdvance(MovLayer *ml, Region *fence, MovLayer *paddle1)
+void mlAdvance(MovLayer *ml, Region *fence)
 {
   Vec2 newPos;
   u_char axis;
@@ -200,6 +200,25 @@ void check_play_sound()
     }
 }
 
+int scorep1 = 0;
+int scorep2 = 0;
+
+void check_ifScore(MovLayer *ml, Region *fence)
+{
+  Vec2 newPos;
+  u_char axis;
+  Region shapeBoundary;
+  for (; ml; ml = ml->next) {
+    vec2Add(&newPos, &ml->layer->posNext, &ml->velocity);
+    abShapeGetBounds(ml->layer->abShape, &newPos, &shapeBoundary);
+    if(shapeBoundary.topLeft.axes[0] < fence->topLeft.axes[0]) {
+      scorep1 += 1;
+    }
+    if(shapeBoundary.botRight.axes[0] > fence->botRight.axes[0]) {
+      scorep2 += 1;
+    }
+  } /**< for ml */
+}
 
 u_int bgColor = COLOR_BLUE;     /**< The background color */
 int redrawScreen = 1;           /**< Boolean for whether screen needs to be redrawn */
@@ -224,21 +243,25 @@ void main()
   layerInit(&layer0);
   layerDraw(&layer0);
 
-
   layerGetBounds(&fieldLayer, &fieldFence);
-
 
   enableWDTInterrupts();      /**< enable periodic interrupt */
   buzzer_init();
   or_sr(0x8);	              /**< GIE (enable interrupts) */
 
-  drawString5x7(0,0, "switches:", COLOR_GREEN, COLOR_BLUE);
- 
+  drawString5x7(screenWidth/2 - 15, 0, "score:", COLOR_GREEN, COLOR_BLUE);
+  
   for(;;) {
     while (!redrawScreen) { /**< Pause CPU if screen doesn't need updating */
       P1OUT &= ~GREEN_LED;    /**< Green led off witHo CPU */
       or_sr(0x10);	      /**< CPU OFF */
     }
+    //Set score array to store score variables for players
+    char scoreArray[2];
+    scoreArray[0] = '0' + scorep1; //Score for player 1
+    scoreArray[1] = '|';           //Simple barrier to seperate scores
+    scoreArray[2] = '0' + scorep2; //Score for player 2
+    drawString5x7(screenWidth/2 - 15, 20, scoreArray, COLOR_GREEN, COLOR_BLUE);
     P1OUT |= GREEN_LED;       /**< Green led on when CPU on */
     redrawScreen = 0;
     movLayerDraw(&ml0, &layer0);
@@ -252,11 +275,13 @@ void wdt_c_handler()
   P1OUT |= GREEN_LED;		      /**< Green LED on when cpu on */
   count ++;
   if (count == 15) {
-    mlAdvance(&ml0, &fieldFence, &ml1);
+    mlAdvance(&ml0, &fieldFence);
+    check_ifScore(&ml0, &fieldFence);
     ml1.velocity.axes[1] = 0;
     ml2.velocity.axes[1] = 0;
     buzzer_play(0);
     check_play_sound();
+
     if (!(p2sw_read() & BIT0))
       {
 	ml1.velocity.axes[1] = -3; 
