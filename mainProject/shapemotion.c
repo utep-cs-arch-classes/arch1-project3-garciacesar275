@@ -1,10 +1,5 @@
 /** \file shapemotion.c
- *  \brief This is a simple shape motion demo.
- *  This demo creates two layers containing shapes.
- *  One layer contains a rectangle and the other a circle.
- *  While the CPU is running the green LED is on, and
- *  when the screen does not need to be redrawn the CPU
- *  is turned off along with the green LED.
+ *  \brief This is a simple pong game
  */  
 #include <msp430.h>
 #include <libTimer.h>
@@ -27,14 +22,6 @@ AbRectOutline fieldOutline = {	/* playing field */
   {screenWidth/2 - 1, screenHeight/2 - 20}
 };
 
-Layer layer1 = {		/**< Layer with an orange circle */
-  (AbShape *)&circle8,
-  {(screenWidth/2)+10, (screenHeight/2)+5}, /**< bit below & right of center */
-  {0,0}, {0,0},				    /* last & next pos */
-  COLOR_ORANGE,
-  0
-};
-
 Layer paddleLayer1 = {
   (AbShape *)&paddle1,
   {12, screenHeight/2},
@@ -47,7 +34,7 @@ Layer paddleLayer2 = {
   (AbShape *)&paddle2,
   {screenWidth - 12, screenHeight/2},
   {0,0}, {0,0},
-  COLOR_RED,
+  COLOR_BLUE,
   &paddleLayer1,
 };
 
@@ -59,11 +46,11 @@ Layer fieldLayer = {		/* playing field as a layer */
   &paddleLayer2,
 };
 
-Layer layer0 = {		/**< Layer with an orange circle */
+Layer layer0 = {		/**< Layer with a ball */
   (AbShape *)&circle8,
   {(screenWidth/2)+10, (screenHeight/2)+5}, /**< bit below & right of center */
   {0,0}, {0,0},				    /* last & next pos */
-  COLOR_VIOLET,
+  COLOR_GREEN,
   &fieldLayer,
 };
 
@@ -200,9 +187,13 @@ void check_play_sound()
     }
 }
 
-int scorep1 = 0;
-int scorep2 = 0;
+int scorep1 = 0; //score counter for player 1
+int scorep2 = 0; //Score counter for player 2
 
+/* Detects when the ball touches either the left or right 
+ * side of the playing field and increments the corresponding
+ * player's score. This is a modified version of the mlAdvance function.
+ */
 void check_ifScore(MovLayer *ml, Region *fence)
 {
   Vec2 newPos;
@@ -212,15 +203,22 @@ void check_ifScore(MovLayer *ml, Region *fence)
     vec2Add(&newPos, &ml->layer->posNext, &ml->velocity);
     abShapeGetBounds(ml->layer->abShape, &newPos, &shapeBoundary);
     if(shapeBoundary.topLeft.axes[0] < fence->topLeft.axes[0]) {
-      scorep1 += 1;
+      scorep2 += 1;
     }
     if(shapeBoundary.botRight.axes[0] > fence->botRight.axes[0]) {
-      scorep2 += 1;
+      scorep1 += 1;
     }
   } /**< for ml */
 }
 
-u_int bgColor = COLOR_BLUE;     /**< The background color */
+void playerWin(char str[])
+{
+  /* Implement a winning message while pausing
+   * the game then afterwards reset the game
+   */
+}
+
+u_int bgColor = COLOR_VIOLET;     /**< The background color */
 int redrawScreen = 1;           /**< Boolean for whether screen needs to be redrawn */
 
 Region fieldFence;		/**< fence around playing field  */
@@ -249,7 +247,7 @@ void main()
   buzzer_init();
   or_sr(0x8);	              /**< GIE (enable interrupts) */
 
-  drawString5x7(screenWidth/2 - 15, 0, "score:", COLOR_GREEN, COLOR_BLUE);
+  drawString5x7(screenWidth/2 - 15, 0, "score:", COLOR_BLACK, COLOR_VIOLET);
   
   for(;;) {
     while (!redrawScreen) { /**< Pause CPU if screen doesn't need updating */
@@ -261,7 +259,7 @@ void main()
     scoreArray[0] = '0' + scorep1; //Score for player 1
     scoreArray[1] = '|';           //Simple barrier to seperate scores
     scoreArray[2] = '0' + scorep2; //Score for player 2
-    drawString5x7(screenWidth/2 - 15, 20, scoreArray, COLOR_GREEN, COLOR_BLUE);
+    drawString5x7(screenWidth/2 - 5, 10, scoreArray, COLOR_BLACK, COLOR_VIOLET);
     P1OUT |= GREEN_LED;       /**< Green led on when CPU on */
     redrawScreen = 0;
     movLayerDraw(&ml0, &layer0);
@@ -282,6 +280,18 @@ void wdt_c_handler()
     buzzer_play(0);
     check_play_sound();
 
+    if(scorep1 == 10 || scorep2 == 10)
+      {
+	//playerWin("Player 1");
+	scorep1 = 0;
+	scorep2 = 0;
+      }
+    /*
+    if(scorep2 == 10)
+      {
+	//playerWin("Player 2");
+      } 
+    */
     if (!(p2sw_read() & BIT0))
       {
 	ml1.velocity.axes[1] = -3; 
